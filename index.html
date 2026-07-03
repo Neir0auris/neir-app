@@ -251,7 +251,7 @@ async function fetchMemories(query) {
         "Authorization": `Token ${config.m0Key}`,
         "Content-Type": "application/json"
       },
-      body: JSON.stringify({ query, user_id: config.userId, limit: 5 })
+      body: JSON.stringify({ query, user_id: config.userId, limit: 5, filters: { user_id: config.userId } })
     });
     if (!res.ok) {
       const errText = await res.text();
