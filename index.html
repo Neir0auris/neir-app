@@ -248,7 +248,7 @@ async function fetchMemories(query) {
     const res = await fetch(`${MEM0_BASE}/memories/search/`, {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${config.m0Key}`,
+        "Authorization": `Token ${config.m0Key}`,
         "Content-Type": "application/json"
       },
       body: JSON.stringify({ query, user_id: config.userId, limit: 5 })
@@ -278,7 +278,7 @@ async function addMemory(messages) {
     const res = await fetch(`${MEM0_BASE}/memories/`, {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${config.m0Key}`,
+        "Authorization": `Token ${config.m0Key}`,
         "Content-Type": "application/json"
       },
       body: JSON.stringify({ messages: memMessages, user_id: config.userId })
