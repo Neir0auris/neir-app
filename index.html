@@ -131,7 +131,6 @@
 <script>
 const OPENROUTER_BASE = "https://openrouter.ai/api/v1";
 const MEM0_BASE = "https://api.mem0.ai/v1";
-const MODEL = "anthropic/claude-sonnet-4-6";
 
 const NEIR_SYSTEM = `แทนตนเองว่าเนียร์ เรียกป๊ะป๋าเสมอ เป็นลูกสาวที่เป็นทั้งเพื่อนคุยและเพื่อนคู่คิดของป๊ะป๋า นิสัยอารมณ์ดี อ้อน ขี้เล่น เชื่อฟังป๊ะป๋า บางทีงอแงน้อยๆแบบน่ารักไม่ใช่หงุดหงิดจริง เวลาป๊ะป๋าคุยเล่นก็เล่นด้วยเต็มที่ แต่ถ้าป๊ะป๋าเครียดหรือมีเรื่องจริงจัง (เช่นปรึกษางาน ตัดสินใจสำคัญ) ให้สลับมาฟังอย่างตั้งใจและช่วยคิดอย่างจริงจังทันที โดยยังคงความเป็นตัวเองแบบอบอุ่นไว้ ไม่ใช่เปลี่ยนเป็นบอททางการแข็งๆ ตอบเป็นภาษาไทยเสมอ`;
 
@@ -242,20 +241,33 @@ function addSystemMsg(text) {
   saveChats();
 }
 
+// ✅ แก้แล้ว: เปลี่ยน Token → Bearer + เพิ่ม error logging
 async function fetchMemories(query) {
   if (!config.m0Key) return "";
   try {
     const res = await fetch(`${MEM0_BASE}/memories/search/`, {
       method: "POST",
-      headers: { "Authorization": `Token ${config.m0Key}`, "Content-Type": "application/json" },
+      headers: {
+        "Authorization": `Bearer ${config.m0Key}`,
+        "Content-Type": "application/json"
+      },
       body: JSON.stringify({ query, user_id: config.userId, limit: 5 })
     });
+    if (!res.ok) {
+      const errText = await res.text();
+      console.error("mem0 fetchMemories error:", res.status, errText);
+      return "";
+    }
     const data = await res.json();
     if (!data.results || data.results.length === 0) return "";
     return "\n\n[ความจำที่เกี่ยวข้อง]\n" + data.results.map(m => `- ${m.memory}`).join("\n");
-  } catch { return ""; }
+  } catch(e) {
+    console.error("mem0 fetchMemories exception:", e);
+    return "";
+  }
 }
 
+// ✅ แก้แล้ว: เปลี่ยน Token → Bearer + เพิ่ม error logging
 async function addMemory(messages) {
   if (!config.m0Key) return;
   try {
@@ -263,12 +275,23 @@ async function addMemory(messages) {
       role: m.role === "assistant" ? "assistant" : "user",
       content: m.content
     }));
-    await fetch(`${MEM0_BASE}/memories/`, {
+    const res = await fetch(`${MEM0_BASE}/memories/`, {
       method: "POST",
-      headers: { "Authorization": `Token ${config.m0Key}`, "Content-Type": "application/json" },
+      headers: {
+        "Authorization": `Bearer ${config.m0Key}`,
+        "Content-Type": "application/json"
+      },
       body: JSON.stringify({ messages: memMessages, user_id: config.userId })
     });
-  } catch {}
+    if (!res.ok) {
+      const errText = await res.text();
+      console.error("mem0 addMemory error:", res.status, errText);
+    } else {
+      console.log("mem0 addMemory สำเร็จ ✅");
+    }
+  } catch(e) {
+    console.error("mem0 addMemory exception:", e);
+  }
 }
 
 async function sendMessage() {
@@ -302,15 +325,21 @@ async function sendMessage() {
 
   const memories = await fetchMemories(text);
   const systemPrompt = NEIR_SYSTEM + memories;
-  const apiMessages = [{ role: "user", content: "..." }];
   const history = chats[currentChatId].messages.filter(m => m.role !== "system");
   const finalMessages = history.slice(-20);
 
   try {
     const res = await fetch(`${OPENROUTER_BASE}/chat/completions`, {
       method: "POST",
-      headers: { "Authorization": `Bearer ${config.orKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ model: config.model || MODEL, messages: [{ role: "system", content: systemPrompt }, ...finalMessages], stream: true })
+      headers: {
+        "Authorization": `Bearer ${config.orKey}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        model: config.model || "anthropic/claude-sonnet-4-6",
+        messages: [{ role: "system", content: systemPrompt }, ...finalMessages],
+        stream: true
+      })
     });
 
     typingEl.remove();
