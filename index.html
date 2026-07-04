@@ -248,10 +248,8 @@ async function fetchMemories(query) {
     const res = await fetch(`${MEM0_BASE}/memories/?user_id=${config.userId}&limit=5`, {
       method: "GET",
       headers: {
-        "Authorization": `Token ${config.m0Key}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({ query, user_id: config.userId, limit: 5, filters: { user_id: config.userId } })
+        "Authorization": `Token ${config.m0Key}`
+      }
     });
     if (!res.ok) {
       const errText = await res.text();
@@ -259,8 +257,9 @@ async function fetchMemories(query) {
       return "";
     }
     const data = await res.json();
-    if (!data.results || data.results.length === 0) return "";
-    return "\n\n[ความจำที่เกี่ยวข้อง]\n" + data.results.map(m => `- ${m.memory}`).join("\n");
+    console.log("mem0 fetch result:", data);
+    if (!data || data.length === 0) return "";
+    return "\n\n[ความจำที่เกี่ยวข้อง]\n" + data.map(m => `- ${m.memory}`).join("\n");
   } catch(e) {
     console.error("mem0 fetchMemories exception:", e);
     return "";
