@@ -245,7 +245,7 @@ function addSystemMsg(text) {
 async function fetchMemories(query) {
   if (!config.m0Key) return "";
   try {
-    const res = await fetch(`${MEM0_BASE}/memories/search/`, {
+    const res = await fetch(`${MEM0_BASE}/memories/?user_id=${config.userId}&limit=5`, {
       method: "POST",
       headers: {
         "Authorization": `Token ${config.m0Key}`,
