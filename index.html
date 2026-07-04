@@ -246,7 +246,7 @@ async function fetchMemories(query) {
   if (!config.m0Key) return "";
   try {
     const res = await fetch(`${MEM0_BASE}/memories/?user_id=${config.userId}&limit=5`, {
-      method: "POST",
+      method: "GET",
       headers: {
         "Authorization": `Token ${config.m0Key}`,
         "Content-Type": "application/json"
