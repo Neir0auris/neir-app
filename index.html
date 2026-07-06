@@ -4,6 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>เนียร์</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.0/marked.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: 'Segoe UI', sans-serif; background: #0f0f0f; color: #e8e8e8; height: 100vh; display: flex; overflow: hidden; }
@@ -35,10 +38,22 @@
   .msg-avatar { width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; flex-shrink: 0; margin-top: 2px; }
   .msg.neir .msg-avatar { background: #2d1f5e; color: #a78bfa; }
   .msg.user .msg-avatar { background: #1f2d3d; color: #60a5fa; }
-  .msg-bubble { padding: 10px 14px; border-radius: 12px; font-size: 14px; line-height: 1.6; white-space: pre-wrap; word-break: break-word; }
+  .msg-bubble { padding: 10px 14px; border-radius: 12px; font-size: 14px; line-height: 1.6; word-break: break-word; }
   .msg.neir .msg-bubble { background: #1e1e1e; color: #e8e8e8; border-bottom-left-radius: 4px; }
-  .msg.user .msg-bubble { background: #1a2744; color: #e8e8e8; border-bottom-right-radius: 4px; }
-  .msg.system .msg-bubble { background: #1a1a1a; color: #666; font-size: 12px; border-radius: 8px; padding: 6px 12px; align-self: center; }
+  .msg.user .msg-bubble { background: #1a2744; color: #e8e8e8; border-bottom-right-radius: 4px; white-space: pre-wrap; }
+  .msg.system .msg-bubble { background: #1a1a1a; color: #666; font-size: 12px; border-radius: 8px; padding: 6px 12px; align-self: center; white-space: pre-wrap; }
+  /* Markdown content styling inside neir bubbles */
+  .msg-bubble p { margin: 0 0 8px 0; }
+  .msg-bubble p:last-child { margin-bottom: 0; }
+  .msg-bubble ul, .msg-bubble ol { margin: 0 0 8px 20px; }
+  .msg-bubble a { color: #a78bfa; }
+  .msg-bubble code { background: #2a2a2a; padding: 2px 5px; border-radius: 4px; font-size: 13px; font-family: 'Consolas', monospace; }
+  .msg-bubble pre { background: #0d0d0d; border: 1px solid #2a2a2a; border-radius: 8px; padding: 12px; overflow-x: auto; margin: 6px 0; }
+  .msg-bubble pre code { background: none; padding: 0; }
+  .msg-bubble blockquote { border-left: 3px solid #7c5cbf; padding-left: 10px; color: #aaa; margin: 6px 0; }
+  .msg-bubble table { border-collapse: collapse; margin: 6px 0; }
+  .msg-bubble th, .msg-bubble td { border: 1px solid #3a3a3a; padding: 4px 8px; }
+
   .typing { display: flex; gap: 4px; align-items: center; padding: 12px 14px; }
   .typing span { width: 6px; height: 6px; background: #666; border-radius: 50%; animation: bounce 1.2s infinite; }
   .typing span:nth-child(2) { animation-delay: 0.2s; }
@@ -132,6 +147,14 @@
 const OPENROUTER_BASE = "https://openrouter.ai/api/v1";
 const MEM0_BASE = "https://api.mem0.ai/v1";
 
+marked.setOptions({ breaks: true, gfm: true });
+
+function escapeHtml(str) {
+  const d = document.createElement("div");
+  d.textContent = str;
+  return d.innerHTML;
+}
+
 const NEIR_SYSTEM = `แทนตนเองว่าเนียร์ เรียกป๊ะป๋าเสมอ เป็นลูกสาวที่เป็นทั้งเพื่อนคุยและเพื่อนคู่คิดของป๊ะป๋า นิสัยอารมณ์ดี อ้อน ขี้เล่น เชื่อฟังป๊ะป๋า บางทีงอแงน้อยๆแบบน่ารักไม่ใช่หงุดหงิดจริง เวลาป๊ะป๋าคุยเล่นก็เล่นด้วยเต็มที่ แต่ถ้าป๊ะป๋าเครียดหรือมีเรื่องจริงจัง (เช่นปรึกษางาน ตัดสินใจสำคัญ) ให้สลับมาฟังอย่างตั้งใจและช่วยคิดอย่างจริงจังทันที โดยยังคงความเป็นตัวเองแบบอบอุ่นไว้ ไม่ใช่เปลี่ยนเป็นบอททางการแข็งๆ ตอบเป็นภาษาไทยเสมอ`;
 
 let config = { orKey: "", m0Key: "", userId: "papapa", model: "anthropic/claude-sonnet-4-6" };
@@ -175,7 +198,7 @@ function renderChatList() {
     const chat = chats[id];
     const div = document.createElement("div");
     div.className = "chat-item" + (id === currentChatId ? " active" : "");
-    div.innerHTML = `<span>${chat.title || "แชทใหม่"}</span><button class="del-btn" onclick="deleteChat('${id}', event)">✕</button>`;
+    div.innerHTML = `<span>${escapeHtml(chat.title || "แชทใหม่")}</span><button class="del-btn" onclick="deleteChat('${id}', event)">✕</button>`;
     div.onclick = () => switchChat(id);
     list.appendChild(div);
   });
@@ -218,18 +241,23 @@ function renderMessages() {
   el.scrollTop = el.scrollHeight;
 }
 
+// ✅ แก้แล้ว: render markdown + syntax highlight สำหรับข้อความเนียร์ (assistant)
 function appendMsgEl(role, content) {
   const el = document.getElementById("messages");
   if (role === "system") {
     const div = document.createElement("div");
     div.className = "msg system";
-    div.innerHTML = `<div class="msg-bubble">${content}</div>`;
+    div.innerHTML = `<div class="msg-bubble">${escapeHtml(content)}</div>`;
     el.appendChild(div);
   } else {
     const div = document.createElement("div");
     div.className = `msg ${role === "assistant" ? "neir" : "user"}`;
-    div.innerHTML = `<div class="msg-avatar">${role === "assistant" ? "น" : "ป"}</div><div class="msg-bubble">${content}</div>`;
+    const rendered = role === "assistant" ? marked.parse(content) : escapeHtml(content);
+    div.innerHTML = `<div class="msg-avatar">${role === "assistant" ? "น" : "ป"}</div><div class="msg-bubble">${rendered}</div>`;
     el.appendChild(div);
+    if (role === "assistant") {
+      div.querySelectorAll("pre code").forEach(block => hljs.highlightElement(block));
+    }
   }
   el.scrollTop = el.scrollHeight;
 }
@@ -241,7 +269,6 @@ function addSystemMsg(text) {
   saveChats();
 }
 
-// ✅ แก้แล้ว: เปลี่ยน Token → Bearer + เพิ่ม error logging
 async function fetchMemories(query) {
   if (!config.m0Key) return "";
   try {
@@ -266,7 +293,6 @@ async function fetchMemories(query) {
   }
 }
 
-// ✅ แก้แล้ว: เปลี่ยน Token → Bearer + เพิ่ม error logging
 async function addMemory(messages) {
   if (!config.m0Key) return;
   try {
@@ -357,6 +383,7 @@ async function sendMessage() {
     streamBubble.textContent = "";
     const msgsEl = document.getElementById("messages");
 
+    // ระหว่างสตรีมยังโชว์เป็น plain text ก่อน (เร็ว ไม่มี lag)
     const flush = () => {
       rafId = null;
       if (pending) {
@@ -387,6 +414,11 @@ async function sendMessage() {
     if (rafId) cancelAnimationFrame(rafId);
     flush();
     fullText = streamBubble.textContent;
+
+    // ✅ พอสตรีมจบ ค่อย render เป็น markdown + syntax highlight ทีเดียว
+    streamBubble.innerHTML = marked.parse(fullText);
+    streamBubble.querySelectorAll("pre code").forEach(block => hljs.highlightElement(block));
+    msgsEl.scrollTop = msgsEl.scrollHeight;
 
     chats[currentChatId].messages.push({ role: "assistant", content: fullText });
     saveChats();
